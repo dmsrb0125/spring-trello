@@ -27,12 +27,12 @@ public class UserController {
     @PostMapping("/signup")
     public ResponseEntity<HttpResponseDto<Void>> signup(@Validated @RequestBody SignupRequestDto requestDto) {
         userService.signup(requestDto);
-        return ResponseUtils.success(HttpStatus.CREATED, null);
+        return ResponseUtils.success(HttpStatus.CREATED);
     }
 
     // 프로필 조회
-    @GetMapping("/profile")
-    public ResponseEntity<HttpResponseDto<ProfileResponseDto>> getProfile(@RequestParam Long userId) {
+    @GetMapping("/{userId}")
+    public ResponseEntity<HttpResponseDto<ProfileResponseDto>> getProfile(@PathVariable Long userId) {
         ProfileResponseDto profile = userService.getProfile(userId);
         return ResponseUtils.success(HttpStatus.OK, profile);
     }

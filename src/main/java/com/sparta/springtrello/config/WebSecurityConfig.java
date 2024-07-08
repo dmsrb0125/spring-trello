@@ -17,6 +17,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
@@ -30,6 +31,7 @@ public class WebSecurityConfig {
     private final AuthenticationConfiguration authenticationConfiguration;
     private final UserAdapter userAdapter;
     private final ObjectMapper objectMapper;
+    private final PasswordEncoder passwordEncoder;
 
     // 사용자 인증을 처리하는 컴포넌트
     @Bean
@@ -41,7 +43,7 @@ public class WebSecurityConfig {
     // 사용자 로그인 시 JWT를 생성하고 반환하는 필터
     @Bean
     public JwtAuthenticationFilter jwtAuthenticationFilter() throws Exception {
-        JwtAuthenticationFilter filter = new JwtAuthenticationFilter(jwtProvider, userAdapter, objectMapper);
+        JwtAuthenticationFilter filter = new JwtAuthenticationFilter(jwtProvider, userAdapter, objectMapper,passwordEncoder);
         filter.setAuthenticationManager(authenticationManager(authenticationConfiguration));
         return filter;
     }

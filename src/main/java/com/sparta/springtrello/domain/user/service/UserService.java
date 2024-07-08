@@ -1,6 +1,5 @@
 package com.sparta.springtrello.domain.user.service;
 
-
 import com.sparta.springtrello.domain.user.dto.ProfileResponseDto;
 import com.sparta.springtrello.domain.user.dto.SignupRequestDto;
 import com.sparta.springtrello.domain.user.entity.User;

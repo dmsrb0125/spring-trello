@@ -1,6 +1,5 @@
 package com.sparta.springtrello.exception.custom.user;
 
-
 import com.sparta.springtrello.common.ResponseCodeEnum;
 import lombok.Getter;
 
@@ -12,4 +11,5 @@ public class UserException extends RuntimeException {
         super(responseCode.getMessage());
         this.responseCode = responseCode;
     }
+
 }
