@@ -1,12 +1,13 @@
 package com.sparta.springtrello.auth;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import com.sparta.springtrello.common.HttpResponseDto;
 import com.sparta.springtrello.common.ResponseCodeEnum;
 import com.sparta.springtrello.common.ResponseUtils;
 import com.sparta.springtrello.domain.user.entity.User;
 import com.sparta.springtrello.domain.user.repository.UserAdapter;
+import com.sparta.springtrello.exception.custom.auth.InvalidTokenException;
+import com.sparta.springtrello.exception.custom.auth.UserAuthenticationException;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
@@ -73,8 +74,7 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
         String accessToken = jwtProvider.getAccessTokenFromHeader(req);
         try {
             if (!StringUtils.hasText(accessToken)) {
-                setErrorResponse(res, ResponseCodeEnum.INVALID_TOKENS);
-                return;
+                throw new InvalidTokenException();
             }
 
             // 액세스 토큰에서 클레임(사용자 정보)을 추출
@@ -84,8 +84,7 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
 
             // 유저의 리프레쉬 토큰이 null인 경우
             if (user == null || user.getRefreshToken() == null) {
-                setErrorResponse(res, ResponseCodeEnum.INVALID_TOKENS);
-                return;
+                throw new InvalidTokenException();
             }
 
             boolean accessTokenValid = jwtProvider.validateToken(accessToken);
@@ -93,8 +92,7 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
                 log.info("유효한 액세스 토큰 처리");
                 handleValidAccessToken(accessToken); // 엑세스 토큰의 유효성을 검증합니다.
             } else {
-                setErrorResponse(res, ResponseCodeEnum.INVALID_TOKENS);
-                return;
+                throw new InvalidTokenException();
             }
         } catch (ExpiredJwtException e) {
             // 액세스 토큰이 만료된 경우 리프레시 토큰을 통해 액세스 토큰을 재발급 시도
@@ -103,7 +101,9 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
             return;
         } catch (JwtException | IllegalArgumentException e) {
             // 그 외의 잘못된 토큰인 경우
-            setErrorResponse(res, ResponseCodeEnum.INVALID_TOKENS);
+            throw new InvalidTokenException();
+        } catch (UserAuthenticationException e) {
+            setErrorResponse(res, e.getResponseCode());
             return;
         }
         filterChain.doFilter(req, res);
@@ -134,10 +134,10 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
                 res.addHeader(JwtProvider.AUTHORIZATION_HEADER, newAccessToken);
                 setAuthentication(username);
             } else {
-                setErrorResponse(res, ResponseCodeEnum.INVALID_TOKENS);
+                throw new InvalidTokenException();
             }
         } else {
-            setErrorResponse(res, ResponseCodeEnum.REFRESH_TOKEN_EXPIRED);
+            throw new InvalidTokenException();
         }
     }
 

@@ -2,11 +2,11 @@ package com.sparta.springtrello.domain.user.repository;
 
 
 import com.sparta.springtrello.domain.user.entity.User;
-import com.sparta.springtrello.exception.custom.user.UserNotFoundException;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import com.sparta.springtrello.exception.custom.user.UserNotFoundException;
 
 @Slf4j
 @Component
