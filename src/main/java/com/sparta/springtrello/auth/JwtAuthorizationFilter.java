@@ -44,7 +44,9 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
             "/", List.of(HttpMethod.GET.name()),
             "/error", List.of(HttpMethod.GET.name()),
             "/users/signup", List.of(HttpMethod.GET.name(), HttpMethod.POST.name()),
-            "/users/login", List.of(HttpMethod.GET.name(), HttpMethod.POST.name())
+            "/users/login", List.of(HttpMethod.GET.name(), HttpMethod.POST.name()),
+            "/users/kakao/authorize", List.of(HttpMethod.GET.name()),
+            "/users/kakao/callback", List.of(HttpMethod.GET.name())
     );
 
     public JwtAuthorizationFilter(JwtProvider jwtProvider, UserDetailsServiceImpl userDetailsService,

@@ -68,7 +68,7 @@ public class WebSecurityConfig {
         http.authorizeHttpRequests((authorizeHttpRequests) ->
                 authorizeHttpRequests
                         .requestMatchers(PathRequest.toStaticResources().atCommonLocations()).permitAll() // resources 접근 허용 설정
-                        .requestMatchers("/", "/error", "/users/signup", "/users/login").permitAll() // 메인 페이지, 에러 페이지, 회원가입, 로그인 요청 허가
+                        .requestMatchers("/", "/error", "/users/signup", "/users/login", "/users/kakao/authorize", "/users/kakao/callback").permitAll() // 메인 페이지, 에러 페이지, 회원가입, 로그인, 카카오 요청 허가
                         .anyRequest().authenticated() // 그 외 모든 요청 인증처리
         );
 

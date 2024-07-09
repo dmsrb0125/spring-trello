@@ -20,11 +20,9 @@ public class User extends Timestamped {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-
     @NotNull
     @Column(unique = true)
     private String username;
-
 
     @Setter
     @NotNull
@@ -53,10 +51,21 @@ public class User extends Timestamped {
     @Column
     private String pictureUrl;
 
+    @Column
+    private Long kakaoId;
+
     public User(String username, String password, UserStatusEnum userStatus) {
         this.username = username;
         this.password = password;
         this.userStatus = userStatus;
+    }
+
+    public User(Long kakaoId, String username, String pictureUrl, String password) {
+        this.kakaoId = kakaoId;
+        this.pictureUrl = pictureUrl;
+        this.username = username;
+        this.password = password;
+        this.userStatus = UserStatusEnum.STATUS_NORMAL;
     }
 
 }

@@ -32,4 +32,17 @@ logging.level:
 
 jwt-secret-key: ${JWT-SECRET-KEY}
 
+cloud:
+  aws:
+    credentials:
+      access-key: ${AWS-ACCESS-KEY}
+      secret-key: ${AWS-SECRET-KEY}
+    region:
+      static: us-east-2
+    s3:
+      bucket: sparta-storage
+
+kakao:
+  client-id: ${CLIENT-ID}
+  redirect-uri: http://localhost:8080/users/kakao/callback
 
