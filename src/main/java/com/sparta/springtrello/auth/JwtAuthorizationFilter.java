@@ -6,8 +6,6 @@ import com.sparta.springtrello.common.ResponseCodeEnum;
 import com.sparta.springtrello.common.ResponseUtils;
 import com.sparta.springtrello.domain.user.entity.User;
 import com.sparta.springtrello.domain.user.repository.UserAdapter;
-import com.sparta.springtrello.exception.custom.auth.InvalidTokenException;
-import com.sparta.springtrello.exception.custom.auth.UserAuthenticationException;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
@@ -18,8 +16,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
@@ -30,7 +28,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 
 @Slf4j(topic = "JWT 검증 및 인가")
 public class JwtAuthorizationFilter extends OncePerRequestFilter {
@@ -40,13 +37,8 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
     private final UserAdapter userAdapter;
     private final ObjectMapper objectMapper;
 
-    private final Map<String, List<String>> whiteList = Map.of(
-            "/", List.of(HttpMethod.GET.name()),
-            "/error", List.of(HttpMethod.GET.name()),
-            "/users/signup", List.of(HttpMethod.GET.name(), HttpMethod.POST.name()),
-            "/users/login", List.of(HttpMethod.GET.name(), HttpMethod.POST.name()),
-            "/users/kakao/authorize", List.of(HttpMethod.GET.name()),
-            "/users/kakao/callback", List.of(HttpMethod.GET.name())
+    private final List<String> anyMethodWhiteList = List.of(
+            "/", "/error", "/users/signup", "/users/login", "/users/kakao/authorize", "/users/kakao/callback"
     );
 
     public JwtAuthorizationFilter(JwtProvider jwtProvider, UserDetailsServiceImpl userDetailsService,
@@ -62,84 +54,75 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
                                     @NonNull FilterChain filterChain) throws ServletException, IOException {
 
         String uri = req.getRequestURI();
-        String method = req.getMethod();
         log.info("요청된 URI: {}", uri);
 
         // 화이트 리스트 확인
-        if (isWhiteListed(uri, method)) {
-            log.info("인증이 필요 없는 요청: {} {}", method, uri);
+        if (isWhiteListed(uri)) {
+            log.info("인증이 필요 없는 요청: {}", uri);
             filterChain.doFilter(req, res);
             return;
         }
 
-        // HTTP 요청 헤더에서 JWT 토큰 값을 가져옴. 요청헤더에서 토큰 추출
-        String accessToken = jwtProvider.getAccessTokenFromHeader(req);
         try {
+            String accessToken = jwtProvider.getAccessTokenFromHeader(req);
             if (!StringUtils.hasText(accessToken)) {
-                throw new InvalidTokenException();
+                setErrorResponse(res);
+                return;
             }
 
-            // 액세스 토큰에서 클레임(사용자 정보)을 추출
             Claims accessTokenClaims = jwtProvider.getUserInfoFromToken(accessToken);
             String username = accessTokenClaims.getSubject();
             User user = userAdapter.findByUsername(username);
 
-            // 유저의 리프레쉬 토큰이 null인 경우
             if (user == null || user.getRefreshToken() == null) {
-                throw new InvalidTokenException();
+                setErrorResponse(res);
+                return;
             }
 
             boolean accessTokenValid = jwtProvider.validateToken(accessToken);
             if (accessTokenValid) {
                 log.info("유효한 액세스 토큰 처리");
-                handleValidAccessToken(accessToken); // 엑세스 토큰의 유효성을 검증합니다.
+                handleValidAccessToken(accessToken);
             } else {
-                throw new InvalidTokenException();
+                setErrorResponse(res);
+                return;
             }
         } catch (ExpiredJwtException e) {
-            // 액세스 토큰이 만료된 경우 리프레시 토큰을 통해 액세스 토큰을 재발급 시도
             log.info("만료된 액세스 토큰 처리");
             handleExpiredAccessToken(req, res);
             return;
-        } catch (JwtException | IllegalArgumentException e) {
-            // 그 외의 잘못된 토큰인 경우
-            throw new InvalidTokenException();
-        } catch (UserAuthenticationException e) {
-            setErrorResponse(res, e.getResponseCode());
+        } catch (JwtException | IllegalArgumentException | AuthenticationServiceException e) {
+            setErrorResponse(res);
             return;
         }
+
         filterChain.doFilter(req, res);
     }
 
     // 유효한 Access Token 처리
     private void handleValidAccessToken(String accessToken) {
-        // 액세스 토큰에서 클레임(사용자 정보)을 추출
         Claims accessTokenClaims = jwtProvider.getUserInfoFromToken(accessToken);
         String username = accessTokenClaims.getSubject();
-
-        // 사용자 인증 설정
         setAuthentication(username);
     }
 
     // 액세스 토큰이 만료된 경우 리프레시 토큰을 통해 액세스 토큰을 재발급
-    private void handleExpiredAccessToken(HttpServletRequest req, HttpServletResponse res) throws IOException {
+    private void handleExpiredAccessToken(HttpServletRequest req, HttpServletResponse res) {
         String refreshToken = jwtProvider.getRefreshTokenFromHeader(req);
-        // refreshToken이 null이 아니고 비어 있지 않으며 유효한 텍스트를 포함하고 있는지 확인, 유효성 확인
         if (StringUtils.hasText(refreshToken) && jwtProvider.validateToken(refreshToken)) {
             Claims refreshTokenClaims = jwtProvider.getUserInfoFromToken(refreshToken);
             String username = refreshTokenClaims.getSubject();
 
-            // 데이터베이스에서 리프레시 토큰 확인
             User user = userAdapter.findByUsername(username);
             if (user != null && refreshToken.equals(user.getRefreshToken())) {
                 String newAccessToken = jwtProvider.createAccessToken(username);
                 res.addHeader(JwtProvider.AUTHORIZATION_HEADER, newAccessToken);
                 setAuthentication(username);
             } else {
-                throw new InvalidTokenException();
+                setErrorResponse(res);
             }
         } else {
-            throw new InvalidTokenException();
+            setErrorResponse(res);
         }
     }
 
@@ -154,22 +137,34 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
     // 인증 객체 생성 매서드
     private Authentication createAuthentication(String username) {
         UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-        return new UsernamePasswordAuthenticationToken(userDetails, null,
-                userDetails.getAuthorities());
+        return new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
     }
 
-    // 예외를 처리하고 HTTP 응답을 설정하는 메서드
-    private void setErrorResponse(HttpServletResponse res, ResponseCodeEnum responseCodeEnum) throws IOException {
-        ResponseEntity<HttpResponseDto<Void>> responseEntity = ResponseUtils.error(responseCodeEnum);
+    private void writeResponseBody(HttpServletResponse res, ResponseEntity<HttpResponseDto<Void>> responseEntity) throws IOException {
         res.setStatus(responseEntity.getStatusCode().value());
         res.setContentType("application/json;charset=UTF-8");
-        ServletOutputStream outputStream = res.getOutputStream();
-        objectMapper.writeValue(outputStream, responseEntity.getBody());
-        outputStream.flush();
+        try (ServletOutputStream outputStream = res.getOutputStream()) {
+            objectMapper.writeValue(outputStream, responseEntity.getBody());
+            outputStream.flush();
+        } catch (IOException e) {
+            log.error("응답 본문 쓰기 실패: {}", e.getMessage());
+            res.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            res.setContentType("application/json");
+            res.getWriter().write("{\"statusCode\": 500, \"message\": \"Internal Server Error\"}");
+        }
+    }
+
+    private void setErrorResponse(HttpServletResponse response) {
+        ResponseEntity<HttpResponseDto<Void>> responseEntity = ResponseUtils.error(ResponseCodeEnum.INVALID_TOKENS);
+        try {
+            writeResponseBody(response, responseEntity);
+        } catch (IOException e) {
+            log.error("에러 응답 본문 쓰기 실패: {}", e.getMessage());
+        }
     }
 
     // 화이트 리스트 검사 메서드
-    private boolean isWhiteListed(String uri, String method) {
-        return whiteList.getOrDefault(uri, List.of()).contains(method);
+    private boolean isWhiteListed(String uri) {
+        return anyMethodWhiteList.stream().anyMatch(uri::equals);
     }
 }

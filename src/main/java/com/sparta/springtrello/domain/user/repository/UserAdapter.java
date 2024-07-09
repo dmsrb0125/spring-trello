@@ -5,7 +5,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
-import com.sparta.springtrello.exception.custom.user.UserNotFoundException;
+import com.sparta.springtrello.exception.custom.user.UserException;
+import com.sparta.springtrello.common.ResponseCodeEnum;
 
 import java.util.UUID;
 
@@ -18,12 +19,12 @@ public class UserAdapter {
 
     public User findById(Long id) {
         return userRepository.findById(id)
-                .orElseThrow(UserNotFoundException::new);
+                .orElseThrow(() -> new UserException(ResponseCodeEnum.USER_NOT_FOUND));
     }
 
     public User findByUsername(String username) {
         return userRepository.findByUsername(username)
-                .orElseThrow(UserNotFoundException::new);
+                .orElseThrow(() -> new UserException(ResponseCodeEnum.USER_NOT_FOUND));
     }
 
     public boolean existsByUsername(String username) {

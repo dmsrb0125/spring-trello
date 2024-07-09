@@ -8,10 +8,8 @@ import com.sparta.springtrello.domain.user.dto.UpdateProfileRequestDto;
 import com.sparta.springtrello.domain.user.entity.User;
 import com.sparta.springtrello.domain.user.entity.UserStatusEnum;
 import com.sparta.springtrello.domain.user.repository.UserAdapter;
-import com.sparta.springtrello.exception.custom.user.UserAlreadyExistsException;
-import com.sparta.springtrello.exception.custom.user.InvalidCurrentPasswordException;
-import com.sparta.springtrello.exception.custom.user.SameAsOldPasswordException;
-import com.sparta.springtrello.exception.custom.common.UploadException;
+import com.sparta.springtrello.exception.custom.user.UserException;
+import com.sparta.springtrello.exception.custom.user.PasswordException;
 import com.sparta.springtrello.common.ResponseCodeEnum;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -40,7 +38,7 @@ public class UserService {
     public void signup(SignupRequestDto requestDto) {
         // 사용자명이 이미 존재하는지 확인
         if (userAdapter.existsByUsername(requestDto.getUsername())) {
-            throw new UserAlreadyExistsException();
+            throw new UserException(ResponseCodeEnum.USER_ALREADY_EXISTS);
         }
 
         String encodedPassword = passwordEncoder.encode(requestDto.getPassword());
@@ -61,12 +59,12 @@ public class UserService {
 
         // 현재 비밀번호 확인
         if (!passwordEncoder.matches(requestDto.getCurrentPassword(), user.getPassword())) {
-            throw new InvalidCurrentPasswordException();
+            throw new PasswordException(ResponseCodeEnum.PASSWORD_INCORRECT);
         }
 
         // 새로운 비밀번호가 현재 비밀번호와 다른지 확인
         if (passwordEncoder.matches(requestDto.getNewPassword(), user.getPassword())) {
-            throw new SameAsOldPasswordException();
+            throw new PasswordException(ResponseCodeEnum.SAME_AS_OLD_PASSWORD);
         }
 
         // 비밀번호 업데이트
@@ -86,7 +84,7 @@ public class UserService {
                 String pictureUrl = s3Uploader.upload(profilePicture, "profile-pictures");
                 user.setPictureUrl(pictureUrl);
             } catch (IOException e) {
-                throw new UploadException(ResponseCodeEnum.UPLOAD_FAILED);
+                throw new UserException(ResponseCodeEnum.UPLOAD_FAILED);
             }
         }
         userAdapter.save(user);

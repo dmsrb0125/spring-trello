@@ -2,8 +2,6 @@ package com.sparta.springtrello.exception;
 
 import com.sparta.springtrello.common.HttpResponseDto;
 import com.sparta.springtrello.common.ResponseUtils;
-import com.sparta.springtrello.exception.custom.user.UserException;
-import com.sparta.springtrello.exception.custom.common.UploadException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,17 +16,12 @@ import java.util.List;
 @RestControllerAdvice
 public class GlobalExceptionAdvice {
 
-    @ExceptionHandler(UserException.class)
-    public ResponseEntity<HttpResponseDto<Void>> handleUserException(UserException e) {
+    @ExceptionHandler(CustomException.class)
+    public ResponseEntity<HttpResponseDto<Void>> handleUserException(CustomException e) {
         log.error("에러 메세지: ", e);
         return ResponseUtils.error(e.getResponseCode());
     }
 
-    @ExceptionHandler(UploadException.class)
-    public ResponseEntity<HttpResponseDto<Void>> handleUploadException(UploadException e) {
-        log.error("파일 업로드 에러: ", e);
-        return ResponseUtils.error(e.getResponseCode());
-    }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<HttpResponseDto<List<String>>> handleMethodArgumentNotValidException(MethodArgumentNotValidException e) {

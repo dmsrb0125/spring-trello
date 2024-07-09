@@ -1,15 +1,10 @@
 package com.sparta.springtrello.exception.custom.common;
 
 import com.sparta.springtrello.common.ResponseCodeEnum;
-import lombok.Getter;
+import com.sparta.springtrello.exception.CustomException;
 
-
-@Getter
-public class UploadException extends RuntimeException {
-    private final ResponseCodeEnum responseCode;
-
+public class UploadException extends CustomException {
     public UploadException(ResponseCodeEnum responseCode) {
-        super(responseCode.getMessage());
-        this.responseCode = responseCode;
+        super(responseCode);
     }
 }
