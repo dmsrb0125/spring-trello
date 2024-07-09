@@ -36,6 +36,12 @@ public class User extends Timestamped {
     private UserStatusEnum userStatus;
 
     @Setter
+    @NotNull
+    @Enumerated(EnumType.STRING)
+    @Column
+    private UserRoleEnum userRole;
+
+    @Setter
     @Column
     private String refreshToken;
 

@@ -21,6 +21,6 @@ public class SignupRequestDto {
             message = "비밀번호는 최소 하나의 대문자, 소문자, 숫자, 특수문자를 포함해야 합니다.")
     private String password;
 
-
+    private String managerPassword = "";
 }
 

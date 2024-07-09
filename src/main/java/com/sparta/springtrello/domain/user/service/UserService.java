@@ -6,12 +6,14 @@ import com.sparta.springtrello.domain.user.dto.SignupRequestDto;
 import com.sparta.springtrello.domain.user.dto.UpdatePasswordRequestDto;
 import com.sparta.springtrello.domain.user.dto.UpdateProfileRequestDto;
 import com.sparta.springtrello.domain.user.entity.User;
+import com.sparta.springtrello.domain.user.entity.UserRoleEnum;
 import com.sparta.springtrello.domain.user.entity.UserStatusEnum;
 import com.sparta.springtrello.domain.user.repository.UserAdapter;
 import com.sparta.springtrello.exception.custom.user.UserException;
 import com.sparta.springtrello.exception.custom.user.PasswordException;
 import com.sparta.springtrello.common.ResponseCodeEnum;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +26,8 @@ public class UserService {
 
     private final UserAdapter userAdapter;
     private final PasswordEncoder passwordEncoder;
+    @Value("${manager-password}")
+    private String managerPassword;
     private final S3Uploader s3Uploader;
 
     @Autowired
@@ -49,6 +53,15 @@ public class UserService {
                 UserStatusEnum.STATUS_NORMAL
         );
 
+        // 사용자 ROLE 확인
+        UserRoleEnum role = UserRoleEnum.ROLE_USER;
+        if (requestDto.getManagerPassword() != null && !requestDto.getManagerPassword().isEmpty()) {
+            if (!managerPassword.equals(requestDto.getManagerPassword())) {
+                throw new PasswordException(ResponseCodeEnum.INVALID_MANAGER_PASSWORD);
+            }
+            role = UserRoleEnum.ROLE_MANAGER;
+        }
+        user.setUserRole(role);
         userAdapter.save(user);
     }
 
